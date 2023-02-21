@@ -17,3 +17,10 @@ Default output format [None]: json
 ```
 
 ## Practice
+### AWS
+- Create a new S3 bucket using the CLI (The name must be globally unique):
+```
+# You also can run without region param and it wil
+aws s3 mb s3://bucketNAME --region us-east-2
+```
+-
