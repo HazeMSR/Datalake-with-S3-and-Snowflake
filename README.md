@@ -21,6 +21,37 @@ Default output format [None]: json
 - Create a new S3 bucket using the CLI (The name must be globally unique):
 ```
 # You also can run without region param and it wil
-aws s3 mb s3://bucketNAME --region us-east-2
+aws s3 mb s3://YOURbucketNAME --region us-east-2
 ```
--
+Alternative you can create directly from [AWS console](https://docs.aws.amazon.com/AmazonS3/latest/userguide/GetStartedWithS3.html)
+
+- Copy the [alcohol-consumption-2021.csv](alcohol-consumption-2021.csv) file to your bucket:
+
+```
+# You can do it also using the web console
+aws s3 cp alcohol-consumption-2021.csv s3://YOURbucketNAME
+```
+
+- Create a new access policy for the previous bucket using CLI:
+```
+aws iam create-policy --policy-name my-snowflake-policies --policy-document s3-policy.json --region us-east-2
+```
+
+If you don't have iam:CreatePolicy attach to your AWS user you can do it using [AWS console](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_create-console.html).
+Please check the content of the s3-policy.json in order to know which policies attach.
+
+- Create a new role using our previous policies
+
+1. Select "Another AWS account" and use your same Account ID.
+
+2. Select the "External ID" option and use a random number like "0000".
+
+![AWS1](documentation_images/1.png)
+
+3. Select the policy that you've created in the previous step.
+
+![AWS2](documentation_images/2.png)
+
+4. Write a name for your role and a description. That's it.
+
+![AWS3](documentation_images/3.png)
