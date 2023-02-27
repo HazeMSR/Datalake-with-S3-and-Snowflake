@@ -55,3 +55,37 @@ Please check the content of the s3-policy.json in order to know which policies a
 4. Write a name for your role and a description. That's it.
 
 ![AWS3](documentation_images/3.png)
+
+### Snowflake
+
+1. Use a new worksheet.
+
+2. Change to the admin account:
+
+```
+# Switch to accountadmin
+USE role accountadmin;
+```
+
+3. Create a storage integration:
+
+```
+CREATE OR REPLACE STORAGE INTEGRATION s3_int
+	TYPE = EXTERNAL_STAGE
+	STORAGE_PROVIDER = S3
+	ENABLED = TRUE
+	STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::00YourRandomNum00:role/YOUR-ROLE-NAME'
+	STORAGE_ALLOWED_LOCATIONS = ( 's3://YOURbucketNAME' );
+
+```
+
+A storage integration is a Snowflake object that stores a generated identity and access management (IAM) user for your S3 cloud storage, along with an optional set of allowed or blocked storage locations.
+
+In order to know more about AWS ARN (Amazon Resource Names) you can check [this.](https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+
+
+4. Retrieve the AWS IAM User for your Snowflake Account.
+
+```
+DESC INTEGRATION s3_int;
+```
