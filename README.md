@@ -25,13 +25,6 @@ aws s3 mb s3://YOURbucketNAME --region us-east-2
 ```
 Alternative you can create directly from [AWS console](https://docs.aws.amazon.com/AmazonS3/latest/userguide/GetStartedWithS3.html)
 
-- Copy the [alcohol-consumption-2021.csv](alcohol-consumption-2021.csv) file to your bucket:
-
-```
-# You can do it also using the web console
-aws s3 cp alcohol-consumption-2021.csv s3://YOURbucketNAME
-```
-
 - Create a new access policy for the previous bucket using CLI:
 ```
 aws iam create-policy --policy-name my-snowflake-policies --policy-document s3-policy.json --region us-east-2
@@ -42,17 +35,23 @@ Please check the content of the s3-policy.json in order to know which policies a
 
 - Create a new role using our previous policies
 
-1. Select "Another AWS account" and use your same Account ID.
+1. Go to your AWS account console.
 
-2. Select the "External ID" option and use a random number like "0000".
+2. Go to the IAM section (You can use the AWS browser to achieve it)
+
+3. Click on the left bar on the part of "Roles"
+
+4. Select "Another AWS account" and use your same Account ID.
+
+5. Select the "External ID" option and use a random number like "0000".
 
 ![AWS1](documentation_images/1.png)
 
-3. Select the policy that you've created in the previous step.
+6. Select the policy that you've created in the previous step.
 
 ![AWS2](documentation_images/2.png)
 
-4. Write a name for your role and a description. That's it.
+7. Write a name for your role and a description. That's it.
 
 ![AWS3](documentation_images/3.png)
 
@@ -88,4 +87,105 @@ In order to know more about AWS ARN (Amazon Resource Names) you can check [this.
 
 ```
 DESC INTEGRATION s3_int;
+```
+
+5. Remember the following properties:
+	- STORAGE_AWS_IAM_USER_ARN
+	- STORAGE_AWS_EXTERNAL
+
+![Snowflake1](documentation_images/4.png)
+
+6. Back on your AWS Console do the following Steps:
+	- Search "Roles" in the IAM section.
+	- Select the previous role that you created in this tutorial.
+	- Click on the Trust relationships tab.
+	- Click the Edit trust relationship button.
+	- Copy the following text, changing the variables with the values ​​obtained in the previous query:
+```
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "YOUR_STORAGE_AWS_IAM_USER_ARN"
+      },
+      "Action": "sts:AssumeRole",
+      "Condition": {
+        "StringEquals": {
+          "sts:ExternalId": "YOUR_STORAGE_AWS_EXTERNAL"
+        }
+      }
+    }
+  ]
+}
+```
+
+7. Create a new schema and use it for the stage area:
+```
+CREATE SCHEMA datalake;
+USE SCHEMA datalake;
+```
+
+8. Create a stage:
+```
+CREATE STAGE my_s3_stage
+  STORAGE_INTEGRATION = s3_int
+  URL = 's3://YOURbucketNAME'
+```
+Next we have to create a pipe - which is a COPY INTO statement wrapped in a CREATE PIPE command.
+
+This creates a [SQS](https://aws.amazon.com/getting-started/?nc1=h_ls) queue in the background on AWS for us. We use show pipes to get the ARN for this and use it when configuring for our S3 bucket.
+
+![Snowflake2](documentation_images/5.png)
+
+9.  Create a target table for the JSON data:
+```
+CREATE OR REPLACE TABLE target_table(jsontext variant);
+```
+
+10. Create a pipe in order to ingest data:
+```
+CREATE OR REPLACE PIPE s3_pipe AUTO_INGEST=TRUE AS
+	COPY INTO target_table
+	FROM @my_s3_stage
+	FILE_FORMAT = (type = 'JSON');
+```
+11. Save the notification channel value with the following command:
+```
+SHOW PIPES;
+```
+![Snowflake3](documentation_images/6.png)
+
+12. Go to you AWS console and do the following:
+	- Go to S3 section.
+	- Click on your current S3 bucket.
+	- Click on "Properties" tab.
+	- Scroll down until Event notifications section.
+	- Create event notification.
+	- Name your new event.
+	- Check "All objects create events".
+	- On Destination section select "SQS queue"
+	- Check "Enter SQS queue ARN"
+	- Inside SQS queue paste your previous notification channel.
+
+![AWS4](documentation_images/7.png)
+
+13. Check the pipe status:
+
+```
+SELECT SYSTEM$PIPE_STATUS('s3_pipe');
+```
+
+14. Copy the [alcohol-consumption-2021.csv](alcohol-consumption-2021.csv) file to your bucket:
+
+```
+# You can do it also using the web console
+aws s3 cp alcohol-consumption-2021.csv s3://YOURbucketNAME
+```
+
+15. And finally check the results from your table:
+```
+SELECT * FROM target_table;
 ```
